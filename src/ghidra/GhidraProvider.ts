@@ -91,6 +91,17 @@ const SUPPORTED_ARCHITECTURES = new Set([
   "powerpc",
   "m68k",
   "hexagon",
+  "mips32le",
+  "mips32be",
+  "mips64be",
+  "r5900",
+  "powerpc32be",
+  "powerpc64be",
+  "sh2",
+  "sh4",
+  "z80",
+  "lr35902",
+  "65816",
 ]);
 
 /** Ghidra candidate backed by an isolated ephemeral headless import. */
@@ -283,7 +294,7 @@ export class GhidraProvider implements AnalysisProviderCandidate {
         status: "unsupported",
         code: "architecture_unsupported",
         reason:
-          "Ghidra v1 requires a supported x86, x86_64, arm, arm64, MIPS, RISC-V, raw 6502, or raw m68k target profile.",
+          "Ghidra v1 requires a supported x86, x86_64, arm, arm64, MIPS, RISC-V, PowerPC, Hexagon, or raw console (6502, m68k, mips32le, mips32be, mips64be, r5900, powerpc32be, powerpc64be, sh2, sh4, z80, lr35902, 65816) target profile.",
         diagnostics,
       };
     return {

@@ -10,6 +10,24 @@ const MIPS_ET_REL = 1;
 const MIPS_ET_EXEC = 2;
 const MIPS_ET_DYN = 3;
 const MIPS16_HEADER_ASE = 0x04000000;
+const EF_MIPS_MACH_5900 = 0x00920000;
+/** Language of the PlayStation 2 Emotion Engine, from the patched Ghidra (rivaborn/ghidra). */
+export const GHIDRA_R5900_LANGUAGE_ID = "MIPS:LE:64:R5900";
+
+/**
+ * PlayStation 2 executables: ELF32, little-endian, ET_EXEC, machine EF_MIPS_MACH_5900 (the PS2
+ * toolchains also declare MIPS III). They are pinned to the R5900 language, whose 128-bit MMI,
+ * LQ/SQ and second multiply pipeline the stock MIPS languages do not decode.
+ */
+export const isGhidraR5900Target = (target: BinaryTarget): boolean =>
+  target.kind === "executable" &&
+  target.architecture === "mips" &&
+  target.format === "elf" &&
+  target.mips !== undefined &&
+  target.mips.elfClass === 32 &&
+  target.mips.byteOrder === "little" &&
+  target.mips.type === MIPS_ET_EXEC &&
+  (target.mips.flags & 0x00ff0000) === EF_MIPS_MACH_5900;
 
 /** A distinct compressed shared-image shape; admission still checks every declaration. */
 const isGhidraMips16SharedTarget = (target: BinaryTarget): boolean =>
@@ -22,14 +40,17 @@ const isGhidraMips16SharedTarget = (target: BinaryTarget): boolean =>
 export const ghidraMipsLanguageOverride = (
   target: BinaryTarget,
 ): GhidraLanguageOverride | undefined =>
-  (isGhidraMips16SharedTarget(target) || hasLegacyMipsHeaderShape(target)) &&
-  ghidraMipsUnsupportedReason(target) === null &&
-  target.architecture === "mips"
-    ? {
-        languageId: `MIPS:${target.mips.byteOrder === "little" ? "LE" : "BE"}:32:default`,
-        compilerSpecId: "default",
-      }
-    : undefined;
+  isGhidraR5900Target(target)
+    ? { languageId: GHIDRA_R5900_LANGUAGE_ID, compilerSpecId: "default" }
+    : (isGhidraMips16SharedTarget(target) ||
+          hasLegacyMipsHeaderShape(target)) &&
+        ghidraMipsUnsupportedReason(target) === null &&
+        target.architecture === "mips"
+      ? {
+          languageId: `MIPS:${target.mips.byteOrder === "little" ? "LE" : "BE"}:32:default`,
+          compilerSpecId: "default",
+        }
+      : undefined;
 
 /**
  * Recordless legacy ELF32 MIPS admission: the header declares no ABI field and
@@ -109,6 +130,7 @@ export const ghidraMipsUnsupportedReason = (
 ): string | null => {
   if (target.kind !== "executable" || target.architecture !== "mips")
     return null;
+  if (isGhidraR5900Target(target)) return null;
   const metadata = target.mips;
   if (target.format !== "elf" || metadata === undefined)
     return "MIPS analysis requires ELF header metadata; a family name alone does not select an ISA or ABI.";

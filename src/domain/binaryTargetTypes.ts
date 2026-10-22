@@ -12,6 +12,19 @@ export const BINARY_ARCHITECTURES = [
   "powerpc",
   "m68k",
   "hexagon",
+  // Console CPU families admitted only as raw-binary images (coding_workflow): the header-detected
+  // MIPS and PowerPC families above need ELF metadata, so headerless images name the variant.
+  "mips32le",
+  "mips32be",
+  "mips64be",
+  "r5900",
+  "powerpc32be",
+  "powerpc64be",
+  "sh2",
+  "sh4",
+  "z80",
+  "lr35902",
+  "65816",
 ] as const;
 export type BinaryArchitecture = (typeof BINARY_ARCHITECTURES)[number];
 
@@ -22,6 +35,17 @@ export type BinaryArchitecture = (typeof BINARY_ARCHITECTURES)[number];
 export const RAW_ONLY_ARCHITECTURES = [
   "6502",
   "m68k",
+  "mips32le",
+  "mips32be",
+  "mips64be",
+  "r5900",
+  "powerpc32be",
+  "powerpc64be",
+  "sh2",
+  "sh4",
+  "z80",
+  "lr35902",
+  "65816",
 ] as const satisfies readonly BinaryArchitecture[];
 export type RawOnlyArchitecture = (typeof RAW_ONLY_ARCHITECTURES)[number];
 

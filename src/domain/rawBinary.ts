@@ -16,6 +16,17 @@ export const BINARY_ARCHITECTURES = [
   "arm64",
   "6502",
   "m68k",
+  "mips32le",
+  "mips32be",
+  "mips64be",
+  "r5900",
+  "powerpc32be",
+  "powerpc64be",
+  "sh2",
+  "sh4",
+  "z80",
+  "lr35902",
+  "65816",
 ] as const satisfies readonly BinaryArchitecture[];
 
 /** Provider-neutral CPU family for a caller-supplied raw-binary load. */
@@ -76,14 +87,53 @@ export interface RawBinaryAdmissionRejection {
   readonly constraint: "load_selection_rejected" | "file_format_rejected";
 }
 
-const addressWidth = (architecture: BinaryArchitecture): bigint =>
-  architecture === "6502"
-    ? 0xffffn
-    : architecture === "x86" ||
-        architecture === "arm" ||
-        architecture === "m68k"
-      ? 0xffffffffn
-      : 0xffffffffffffffffn;
+const addressWidth = (architecture: BinaryArchitecture): bigint => {
+  switch (architecture) {
+    case "6502":
+    case "z80":
+    case "lr35902":
+      return 0xffffn;
+    case "65816":
+      return 0xffffffn;
+    case "x86":
+    case "arm":
+    case "m68k":
+    case "mips32le":
+    case "mips32be":
+    case "powerpc32be":
+    case "sh2":
+    case "sh4":
+    // 64-bit registers with 32-bit pointers (N64, PS2, PS3/Xbox 360 user code)
+    case "mips64be":
+    case "r5900":
+    case "powerpc64be":
+      return 0xffffffffn;
+    default:
+      return 0xffffffffffffffffn;
+  }
+};
+
+/** Instruction alignment of a raw-binary entry, in bytes (1 = any). */
+const entryAlignment = (architecture: BinaryArchitecture): bigint => {
+  switch (architecture) {
+    case "arm":
+    case "arm64":
+    case "mips32le":
+    case "mips32be":
+    case "mips64be":
+    case "r5900":
+    case "powerpc32be":
+    case "powerpc64be":
+      return 4n;
+    // 68000-family and SuperH instruction words are fetched from even addresses.
+    case "m68k":
+    case "sh2":
+    case "sh4":
+      return 2n;
+    default:
+      return 1n;
+  }
+};
 
 /** Validate architecture, entry, and that the mapped image fits the CPU width. */
 export const admitRawBinary = (input: {
@@ -95,7 +145,7 @@ export const admitRawBinary = (input: {
   if (!architecture.success)
     return err({
       reason:
-        "raw-binary format requires architecture (x86, x86_64, arm, arm64, 6502, or m68k)",
+        "raw-binary format requires architecture (x86, x86_64, arm, arm64, 6502, m68k, mips32le, mips32be, mips64be, r5900, powerpc32be, powerpc64be, sh2, sh4, z80, lr35902, or 65816)",
       constraint: "load_selection_rejected",
     });
   if (typeof input.entryPoint !== "string")
@@ -110,18 +160,10 @@ export const admitRawBinary = (input: {
       reason: entry.error,
       constraint: "load_selection_rejected",
     });
-  if (
-    (architecture.data === "arm" || architecture.data === "arm64") &&
-    entry.value.value % 4n !== 0n
-  )
+  const alignment = entryAlignment(architecture.data);
+  if (entry.value.value % alignment !== 0n)
     return err({
-      reason: `raw-binary ${architecture.data} entry_point ${entry.value.canonical} must be 4-byte aligned`,
-      constraint: "load_selection_rejected",
-    });
-  // 68000-family instruction words are fetched from even addresses.
-  if (architecture.data === "m68k" && entry.value.value % 2n !== 0n)
-    return err({
-      reason: `raw-binary m68k entry_point ${entry.value.canonical} must be 2-byte aligned`,
+      reason: `raw-binary ${architecture.data} entry_point ${entry.value.canonical} must be ${String(alignment)}-byte aligned`,
       constraint: "load_selection_rejected",
     });
   const length = validateRawBinaryLength(input.fileBytes);
