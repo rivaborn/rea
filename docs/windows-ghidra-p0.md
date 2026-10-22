@@ -17,16 +17,18 @@ additional permission flag or degraded mode is required.
 - Node.js 22.x (>=22.19), 24.x (>=24.11), or 26+;
 - an operator-installed Ghidra 12.1.x distribution (verified with 12.1.4);
 - a 64-bit full JDK inside that installation's declared Java range (JDK 21 or newer, with no maximum, for current 12.1 releases);
-- an explicit native, non-managed x86, x86-64, ARMNT (Thumb-2) or ARM64 PE application/DLL, or a
-  [raw NMOS 6502 image](raw-binary.md#nmos-6502) with a caller-supplied entry; and
+- an explicit native, non-managed x86, x86-64, ARMNT (Thumb-2) or ARM64 PE application/DLL, an
+  ELF executable of a family Ghidra v1 supports on other hosts (console executables: AArch64,
+  x86-64, MIPS32, PowerPC, ARM), or a [raw-binary image](raw-binary.md) (6502, m68k, x86, x86-64,
+  ARM, ARM64) with a caller-supplied entry; and
 - the 26 read-only Ghidra inventory, memory, and function-analysis operations.
 
 Loaded memory reads and file offsets preserve Ghidra's observed source mappings.
 PE load-image inspection returns an explicit unsupported attestation status.
 Independent verification covers admitted DOS MZ, explicit COM, and explicit
 [raw-binary imports](raw-binary.md) on their supported hosts, including the
-admitted raw NMOS 6502 mapping on Windows. Windows P0 admission remains limited
-to native PE and raw NMOS 6502 images. For x64 PE
+admitted raw NMOS 6502 mapping on Windows. ELF and raw-binary targets use the same
+admission as other hosts; the P0 policy limits PE to native, non-managed images. For x64 PE
 NativeAOT RTR 9.1, the read-only snapshot parser can report metadata through
 `inspect_native_load_image` and `inspect_native_data_type` without a JAR or
 database mutation: MethodTable relationships, virtual slots and frozen strings.

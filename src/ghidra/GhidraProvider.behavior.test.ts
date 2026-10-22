@@ -284,7 +284,7 @@ describe("Ghidra provider", () => {
     const windows = provider(installationHost("win32"));
     expect(windows.inspectTargetSupport(target).status).toBe("unsupported");
   });
-  it("admits parsed Hexagon ELF targets through Ghidra profile selection and declines them on Windows", async () => {
+  it("admits parsed Hexagon ELF targets through Ghidra profile selection, on Windows too", async () => {
     const parsed = parseExecutableHeader(elf(1, 1, 164), "x64");
     if (!parsed.ok) throw new Error("Expected valid Hexagon ELF target");
     const target: BinaryTarget = {
@@ -311,8 +311,7 @@ describe("Ghidra provider", () => {
     });
     const windows = provider(installationHost("win32"));
     expect(windows.inspectTargetSupport(target)).toMatchObject({
-      status: "unsupported",
-      code: "target_format_unsupported",
+      status: "supported",
     });
   });
   it("re-observes the exact installation for each fresh task without launching Ghidra", async () => {
@@ -475,9 +474,9 @@ describe("Ghidra raw-binary profile", () => {
       resolved.value.profile.digest,
     );
     const windows = provider(installationHost("win32"));
-    expect(windows.inspectTargetSupport(target).status).toBe("unsupported");
+    expect(windows.inspectTargetSupport(target).status).toBe("supported");
   });
-  it("binds raw m68k to the big-endian 68000 language outside Windows P0", async () => {
+  it("binds raw m68k to the big-endian 68000 language, on Windows too", async () => {
     const target: BinaryTarget = {
       path: "/tmp/m68k.bin",
       sha256: "a".repeat(64),
@@ -504,8 +503,7 @@ describe("Ghidra raw-binary profile", () => {
     expect(
       provider(installationHost("win32")).inspectTargetSupport(target),
     ).toMatchObject({
-      status: "unsupported",
-      code: "target_format_unsupported",
+      status: "supported",
     });
   });
 });
@@ -761,7 +759,10 @@ describe("Ghidra Windows platform support", () => {
       code: "managed_target_unsupported",
     });
     expect(
-      ghidra.inspectTargetSupport(executableTarget("elf", "x86_64")),
+      ghidra.inspectTargetSupport(executableTarget("elf", "x86_64")).status,
+    ).toBe("supported");
+    expect(
+      ghidra.inspectTargetSupport(executableTarget("mach-o", "x86_64")),
     ).toMatchObject({
       status: "unsupported",
       code: "target_format_unsupported",
@@ -867,7 +868,10 @@ describe("Windows Ghidra native failure diagnostics", () => {
         code: "managed_target_unsupported",
       });
       expect(
-        ghidra.inspectTargetSupport(executableTarget("elf", "x86_64")),
+        ghidra.inspectTargetSupport(executableTarget("elf", "x86_64")).status,
+      ).toBe("supported");
+      expect(
+        ghidra.inspectTargetSupport(executableTarget("mach-o", "x86_64")),
       ).toMatchObject({
         status: "unsupported",
         code: "target_format_unsupported",

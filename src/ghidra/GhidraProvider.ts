@@ -244,7 +244,15 @@ export class GhidraProvider implements AnalysisProviderCandidate {
         reason: `Ghidra v1 imports executable targets, not ${target.kind} targets.`,
         diagnostics,
       };
-    if (hostPlatform === "win32")
+    // ELF and raw-binary targets (console executables and ROM/RAM images) use the same
+    // admission as every other host: the Windows native boundary (immutable snapshot, path
+    // admission, Job Object ownership) does not depend on the format. The P0 policy below
+    // concerns native PE applications and DLLs, and the formats Windows does not admit.
+    if (
+      hostPlatform === "win32" &&
+      target.format !== "elf" &&
+      target.format !== "raw-binary"
+    )
       return inspectWindowsP0TargetSupport(target, diagnostics);
     const mipsReason =
       isGhidraPspTarget(target) &&
@@ -633,15 +641,12 @@ const inspectWindowsP0TargetSupport = (
   target: BinaryTarget,
   diagnostics: Readonly<Record<string, JsonValue>>,
 ): ProviderTargetSupport => {
-  // The raw 6502 lane uses the same immutable snapshot and native ownership boundary.
-  if (target.format === "raw-binary" && target.architecture === "6502")
-    return { status: "supported", code: null, reason: null, diagnostics };
   if (target.format !== "pe")
     return {
       status: "unsupported",
       code: "target_format_unsupported",
       reason:
-        "Windows Ghidra P0 accepts native PE and explicitly selected raw 6502 targets only.",
+        "Windows Ghidra P0 accepts native PE, ELF and explicitly selected raw-binary targets only.",
       diagnostics,
     };
   if (!WINDOWS_P0_NATIVE_PE_ARCHITECTURES.includes(target.architecture))

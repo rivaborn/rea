@@ -115,14 +115,14 @@ describe("bounded Ghidra PowerPC admission", () => {
     expect(left.value.profile?.digest).not.toBe(right.value.profile?.digest);
   });
 
-  it("does not widen Windows P0", () => {
+  it("admits the same PowerPC ELF on Windows", () => {
     const windows = new GhidraProvider(
       config,
       silentLogger,
       {},
       { ...host, platform: "win32" },
     );
-    expect(windows.inspectTargetSupport(target()).status).toBe("unsupported");
+    expect(windows.inspectTargetSupport(target()).status).toBe("supported");
   });
 
   it.each([
