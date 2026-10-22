@@ -8,7 +8,8 @@ PSP loading and calling conventions remain owned by
 
 ## Initial boundary
 
-The initial profile is limited to Linux x64, little-endian ELF32 `ET_EXEC`,
+The initial profile is limited to Linux x64 and Windows x64 hosts (other
+platforms and architectures are refused), little-endian ELF32 `ET_EXEC`,
 `EM_MIPS` and the PSPSDK declaration `e_flags=0x10a23001`. Those bits declare
 MIPS II, Allegrex, EABI32 and NOREORDER; they are not proof of every instruction's
 semantics. The profile also requires an inspected version-0 MIPS ABI flags

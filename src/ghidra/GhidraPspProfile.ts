@@ -15,6 +15,18 @@ export const isGhidraPspTarget = (target: BinaryTarget): boolean =>
   target.mips !== undefined &&
   (target.mips.flags & 0x00ff0000) === 0x00a20000;
 
+/**
+ * Hosts where the caller-installed ghidra-allegrex extension runs inside the selected Ghidra:
+ * Linux x64 and Windows x64. Other platforms and architectures are not silently admitted.
+ */
+export const ghidraPspHostUnsupportedReason = (
+  platform: NodeJS.Platform,
+  architecture: NodeJS.Architecture,
+): string | null =>
+  (platform === "linux" || platform === "win32") && architecture === "x64"
+    ? null
+    : "The PSP Allegrex profile is verified on Linux x64 and Windows x64 only.";
+
 /** PSP has its own verified interpretation; generic MIPS rules remain unchanged. */
 export const ghidraProcessorUnsupportedReason = (
   target: BinaryTarget,

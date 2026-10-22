@@ -335,12 +335,26 @@ describe.skipIf(process.platform === "win32")(
 
     it("does not broaden the separately verified host platforms", async () => {
       const { config } = await installation();
-      for (const platform of ["darwin", "win32"] as const) {
+      // Linux x64 and Windows x64 are the verified PSP hosts.
+      for (const platform of ["linux", "win32"] as const) {
         const provider = new GhidraProvider(
           config,
           silentLogger,
           {},
           { ...host, platform },
+        );
+        expect(provider.inspectTargetSupport(target).status).toBe("supported");
+      }
+      for (const [platform, architecture] of [
+        ["darwin", "x64"],
+        ["linux", "arm64"],
+        ["win32", "arm64"],
+      ] as const) {
+        const provider = new GhidraProvider(
+          config,
+          silentLogger,
+          {},
+          { ...host, platform, architecture },
         );
         expect(provider.inspectTargetSupport(target).status).toBe(
           "unsupported",

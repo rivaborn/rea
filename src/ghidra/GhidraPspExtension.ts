@@ -11,6 +11,7 @@ import { AnalysisError } from "../domain/analysisErrorBase.js";
 import { err, ok, type Result } from "../domain/result.js";
 import type { GhidraInstallationInspection } from "./GhidraInstallation.js";
 import { parseGhidraJavaProperties } from "./GhidraJavaProperties.js";
+import { ghidraPspHostUnsupportedReason } from "./GhidraPspProfile.js";
 
 import type { ArtifactResourceScope } from "../artifacts/ArtifactResourceScope.js";
 import { ArtifactReaderFailure } from "../artifacts/ArtifactReader.js";
@@ -206,11 +207,13 @@ export const resolveGhidraPspExtension = async (
     assertArtifactReadActive(signal);
     if (
       installation.status !== "available" ||
-      installation.platform !== "linux" ||
-      installation.architecture !== "x64"
+      ghidraPspHostUnsupportedReason(
+        installation.platform,
+        installation.architecture,
+      ) !== null
     )
       throw new Error(
-        "The initial PSP profile requires a supported Linux x64 Ghidra installation.",
+        "The PSP profile requires a supported Linux x64 or Windows x64 Ghidra installation.",
       );
     const root = join(
       await realpath(installation.installDir),
