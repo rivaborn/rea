@@ -226,6 +226,8 @@ export interface GhidraHeadlessLauncherOptions {
   /** Select the admitted 16-bit real-mode MZ import instead of auto-detection. */
   readonly dosMz?: true;
   readonly dosCom?: true;
+  /** A console cartridge/executable format: the Ghidra loader that maps it (it selects the language). */
+  readonly consoleLoader?: string;
   readonly rawBinary?: {
     readonly languageId: string;
     readonly compilerSpecId: string;
@@ -379,6 +381,9 @@ export class GhidraHeadlessLauncher implements GhidraLauncher {
         ...(this.options.dosMz === undefined
           ? {}
           : { dosMz: this.options.dosMz }),
+        ...(this.options.consoleLoader === undefined
+          ? {}
+          : { consoleLoader: this.options.consoleLoader }),
         ...(this.options.rawBinary === undefined
           ? {}
           : { rawBinary: this.options.rawBinary }),
@@ -683,6 +688,7 @@ export interface GhidraHeadlessArgumentOptions {
   readonly mipsSoftFloat?: true;
   readonly dosMz?: true;
   readonly dosCom?: true;
+  readonly consoleLoader?: string;
   readonly rawBinary?: {
     readonly languageId: string;
     readonly compilerSpecId: string;
@@ -747,60 +753,73 @@ export const ghidraHeadlessArguments = (
     throw new Error(
       "A raw-binary import cannot be combined with a DOS import.",
     );
+  if (
+    options.consoleLoader !== undefined &&
+    (rawBinary !== undefined ||
+      override !== undefined ||
+      options.psp === true ||
+      options.dosMz === true ||
+      options.dosCom === true)
+  )
+    throw new Error(
+      "A console format import uses its own Ghidra loader and cannot be combined with another import mode.",
+    );
   return [
     options.projectRoot,
     "rea-project",
     "-import",
     options.targetPath,
-    ...(options.dosMz === true
-      ? [
-          "-loader",
-          "MzLoader",
-          "-processor",
-          "x86:LE:16:Real Mode",
-          "-cspec",
-          "default",
-        ]
-      : options.dosCom === true
+    ...(options.consoleLoader !== undefined
+      ? ["-loader", options.consoleLoader]
+      : options.dosMz === true
         ? [
             "-loader",
-            "BinaryLoader",
-            "-loader-baseAddr",
-            "1000:0100",
+            "MzLoader",
             "-processor",
             "x86:LE:16:Real Mode",
             "-cspec",
             "default",
           ]
-        : rawBinary === undefined
-          ? options.psp === true
-            ? [
-                "-loader",
-                "PspElfLoader",
-                "-processor",
-                "Allegrex:LE:32:default",
-                "-cspec",
-                "default",
-              ]
-            : override !== undefined
-              ? [
-                  "-processor",
-                  override.languageId,
-                  ...(override.compilerSpecId === undefined
-                    ? []
-                    : ["-cspec", override.compilerSpecId]),
-                ]
-              : []
-          : [
+        : options.dosCom === true
+          ? [
               "-loader",
               "BinaryLoader",
               "-loader-baseAddr",
-              rawBinary.baseAddr,
+              "1000:0100",
               "-processor",
-              rawBinary.languageId,
+              "x86:LE:16:Real Mode",
               "-cspec",
-              rawBinary.compilerSpecId,
-            ]),
+              "default",
+            ]
+          : rawBinary === undefined
+            ? options.psp === true
+              ? [
+                  "-loader",
+                  "PspElfLoader",
+                  "-processor",
+                  "Allegrex:LE:32:default",
+                  "-cspec",
+                  "default",
+                ]
+              : override !== undefined
+                ? [
+                    "-processor",
+                    override.languageId,
+                    ...(override.compilerSpecId === undefined
+                      ? []
+                      : ["-cspec", override.compilerSpecId]),
+                  ]
+                : []
+            : [
+                "-loader",
+                "BinaryLoader",
+                "-loader-baseAddr",
+                rawBinary.baseAddr,
+                "-processor",
+                rawBinary.languageId,
+                "-cspec",
+                rawBinary.compilerSpecId,
+              ]),
     "-readOnly",
     "-deleteProject",
     "-log",

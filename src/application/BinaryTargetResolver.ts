@@ -1,3 +1,4 @@
+import { detectConsoleFormat } from "../domain/consoleFormat.js";
 import { regularFileCancellation } from "../filesystem/OwnedRegularFile.js";
 import { constants, type Stats } from "node:fs";
 import { createHash } from "node:crypto";
@@ -218,6 +219,7 @@ export const parseBinaryTarget = async (
         handle,
         hostArchitecture,
         signal,
+        path,
       );
       if (!detected.ok)
         return err(
@@ -339,6 +341,7 @@ const detectArtifactFormat = async (
       | "dos-mz"
       | "dos-com"
       | "raw-binary"
+      | "console"
     >
   | undefined
 > => {
@@ -441,6 +444,7 @@ const isArchiveFormat = (
     | "dos-mz"
     | "dos-com"
     | "raw-binary"
+    | "console"
   >,
 ): format is Extract<BinaryTarget, { kind: "archive" }>["format"] =>
   isZipPackageFormat(format) ||
@@ -503,6 +507,7 @@ const readExecutableMetadata = async (
   handle: FileHandle,
   hostArchitecture: NodeJS.Architecture,
   signal?: AbortSignal,
+  path?: string,
 ): Promise<Result<ExecutableMetadata, string>> => {
   throwIfTargetResolutionCancelled(signal);
   const prefix = Buffer.alloc(4096);
@@ -513,6 +518,21 @@ const readExecutableMetadata = async (
   // checked against the whole file, not the probed prefix.
   const fileSize = (await handle.stat()).size;
   throwIfTargetResolutionCancelled(signal);
+  // Console cartridge and executable formats first: some are ELF files (Wii U RPX) or have no
+  // magic at offset 0, and each is mapped by its own Ghidra loader.
+  const consoleFormat = await detectConsoleFormat(
+    bytes,
+    fileSize,
+    path,
+    async (offset, length) => {
+      if (offset < 0 || offset >= fileSize) return Buffer.alloc(0);
+      const window = Buffer.alloc(Math.min(length, 65536, fileSize - offset));
+      const observed = await handle.read(window, 0, window.length, offset);
+      throwIfTargetResolutionCancelled(signal);
+      return window.subarray(0, observed.bytesRead);
+    },
+  );
+  if (consoleFormat !== undefined) return ok(consoleFormat);
   if (bytes.length >= 2 && bytes[0] === 0x4d && bytes[1] === 0x5a) {
     let windowsHeader = observeMzWindowsHeader(bytes, fileSize);
     let signatureBytes: Buffer | undefined;

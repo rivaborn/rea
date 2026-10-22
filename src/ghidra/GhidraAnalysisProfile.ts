@@ -194,6 +194,19 @@ export const resolveGhidraAnalysisProfile = async (
       ),
     );
   const selectedLanguage = languageOverride ?? pinnedLanguage;
+  // Console formats: their own Ghidra loader maps the file and selects the language.
+  const consoleFormat =
+    target.format === "console" ? target.console : undefined;
+  if (consoleFormat !== undefined && languageOverride !== undefined)
+    return Promise.resolve(
+      err(
+        new AnalysisUnsupportedTargetError(
+          "resolve_analysis_profile",
+          target.path,
+          `REA_GHIDRA_LANGUAGE_ID cannot override the ${consoleFormat.platform} loader's language.`,
+        ),
+      ),
+    );
   // DOS imports already force an admitted loader, language, and context.
   if (dos && languageOverride !== undefined)
     return Promise.resolve(
@@ -276,15 +289,27 @@ export const resolveGhidraAnalysisProfile = async (
           ? "MzLoader"
           : dosCom
             ? "BinaryLoader"
-            : "auto-from-header",
+            : consoleFormat !== undefined
+              ? consoleFormat.ghidraLoader
+              : "auto-from-header",
         language_id: dos
           ? "x86:LE:16:Real Mode"
-          : (selectedLanguage?.languageId ?? "auto-from-header"),
+          : consoleFormat !== undefined
+            ? "selected-by-loader"
+            : (selectedLanguage?.languageId ?? "auto-from-header"),
         compiler_spec_id: dos
           ? "default"
-          : selectedLanguage === undefined
-            ? "auto-default"
-            : (selectedLanguage.compilerSpecId ?? "language-default"),
+          : consoleFormat !== undefined
+            ? "selected-by-loader"
+            : selectedLanguage === undefined
+              ? "auto-default"
+              : (selectedLanguage.compilerSpecId ?? "language-default"),
+        ...(consoleFormat === undefined
+          ? {}
+          : {
+              console_format: consoleFormat.id,
+              console_platform: consoleFormat.platform,
+            }),
         ...(languageOverride === undefined
           ? pinnedLanguage === undefined
             ? {}

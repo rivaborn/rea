@@ -61,6 +61,7 @@ const formatSchema = z.enum([
   "dos-mz",
   "dos-com",
   "raw-binary",
+  "console",
   "zip",
   "ipa",
   "apk",
@@ -95,13 +96,13 @@ const subjectFormatSchema = z.enum([
 // Snapshot entries retain the same raw-only architecture boundary as targets.
 const subjectSchema = z.discriminatedUnion("format", [
   subjectBaseSchema.extend({
-    format: subjectFormatSchema.exclude(["raw-binary"]),
+    format: subjectFormatSchema.exclude(["raw-binary", "console"]),
     architecture: architectureSchema
       .exclude([...RAW_ONLY_ARCHITECTURES])
       .nullable(),
   }),
   subjectBaseSchema.extend({
-    format: z.literal("raw-binary"),
+    format: z.enum(["raw-binary", "console"]),
     architecture: architectureSchema.nullable(),
   }),
 ]);
@@ -113,7 +114,9 @@ const targetIdentitySchema = z.object({
 const targetSchema = z.discriminatedUnion("format", [
   targetIdentitySchema.extend({
     format: z.enum(
-      formatSchema.options.filter((format) => format !== "raw-binary"),
+      formatSchema.options.filter(
+        (format) => format !== "raw-binary" && format !== "console",
+      ),
     ),
     architecture: architectureSchema
       .exclude([...RAW_ONLY_ARCHITECTURES])
@@ -124,6 +127,12 @@ const targetSchema = z.discriminatedUnion("format", [
     kind: z.literal("executable"),
     architecture: binaryArchitectureSchema,
     entry_point: rawBinaryEntryPointSchema,
+  }),
+  // Console formats map with their own Ghidra loader; their CPU may be a raw-only family.
+  targetIdentitySchema.extend({
+    format: z.literal("console"),
+    kind: z.literal("executable"),
+    architecture: architectureSchema,
   }),
 ]);
 const bindingSchema = z
@@ -362,12 +371,19 @@ export const snapshotTarget = (target: BinaryTarget): AnalysisSnapshotTarget =>
         format: target.format,
         entry_point: target.entryPoint,
       }
-    : {
-        sha256: target.sha256,
-        kind: target.kind,
-        architecture: target.architecture ?? null,
-        format: target.format,
-      };
+    : target.format === "console"
+      ? {
+          sha256: target.sha256,
+          kind: target.kind,
+          architecture: target.architecture,
+          format: target.format,
+        }
+      : {
+          sha256: target.sha256,
+          kind: target.kind,
+          architecture: target.architecture ?? null,
+          format: target.format,
+        };
 
 /** Build the immutable provider/profile binding used by a cached snapshot. */
 export const snapshotBinding = (

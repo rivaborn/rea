@@ -9,6 +9,7 @@ import type {
   UniversalMachOSlice,
 } from "./binaryTargetTypes.js";
 import { err, ok, type Result } from "./result.js";
+import type { ConsoleExecutableMetadata } from "./consoleFormat.js";
 import { readElfFixedHeader } from "./elfFixedHeader.js";
 import { observeMzWindowsHeader, parseDosMzHeader } from "./dosMz.js";
 import {
@@ -73,7 +74,8 @@ export type ExecutableMetadata =
         | "non-executable";
       readonly managed: boolean;
       readonly codeView?: PeCodeViewRecord;
-    };
+    }
+  | ConsoleExecutableMetadata;
 
 /**
  * Parse supported executable headers without I/O. The caller supplies the host

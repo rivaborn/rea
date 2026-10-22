@@ -1,4 +1,5 @@
 import type { ZipPackageFormat } from "./zipPackageFormat.js";
+import type { ConsoleFormatInfo } from "./consoleFormat.js";
 
 /** Provider-neutral CPU families detected from headers or explicitly selected raw loads. */
 export const BINARY_ARCHITECTURES = [
@@ -218,6 +219,19 @@ export type BinaryTarget =
       readonly format: "mach-o-universal";
       /** Selected slice range a provider must analyze instead of the container. */
       readonly universalSlice: UniversalMachOSlice;
+      readonly executableRole?: never;
+      readonly managed?: never;
+    })
+  | (BinaryTargetIdentity & {
+      readonly kind: "executable";
+      /** A console cartridge/executable format mapped by its own Ghidra loader (consoleFormat.ts). */
+      readonly format: "console";
+      readonly architecture: HeaderArchitecture | RawOnlyArchitecture;
+      readonly availableArchitectures: readonly (
+        | HeaderArchitecture
+        | RawOnlyArchitecture
+      )[];
+      readonly console: ConsoleFormatInfo;
       readonly executableRole?: never;
       readonly managed?: never;
     })

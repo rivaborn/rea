@@ -313,6 +313,11 @@ export const createGhidraProviderClient = (input: {
           "Static analysis does not emulate reset vectors, memory-mapped I/O, or firmware boot sequences.",
         ]
       : []),
+    ...(target.format === "console"
+      ? [
+          `${target.console.platform} file (${target.console.id}) mapped by the patched Ghidra's ${target.console.ghidraLoader}: banks, sections and entry points come from the format, not from a flat image. Bank-switched code is split into overlay blocks; calls across banks are resolved only where the bank is a known constant.`,
+        ]
+      : []),
     ...(target.architecture === "mips" ? (target.mips.limitations ?? []) : []),
     ...(committedProfile.parameters.mips_abi_basis ===
     "inferred-o32-assumption-v1"
@@ -364,6 +369,9 @@ export const createGhidraProviderClient = (input: {
       ...(softFloat ? { mipsSoftFloat: true as const } : {}),
       ...(target.format === "dos-mz" ? { dosMz: true } : {}),
       ...(target.format === "dos-com" ? { dosCom: true } : {}),
+      ...(target.format === "console"
+        ? { consoleLoader: target.console.ghidraLoader }
+        : {}),
       ...(rawLanguage === undefined || target.format !== "raw-binary"
         ? {}
         : {

@@ -489,11 +489,23 @@ const lifecycleTargetFields = {
 };
 const detectedLifecycleTargetSchema = z.object({
   ...lifecycleTargetFields,
-  format: targetFormatSchema.exclude(["raw-binary"]),
+  format: targetFormatSchema.exclude(["raw-binary", "console"]),
   architecture: z
     .enum(BINARY_ARCHITECTURES)
     .exclude([...RAW_ONLY_ARCHITECTURES])
     .nullable(),
+});
+const consoleLifecycleTargetSchema = z.object({
+  ...lifecycleTargetFields,
+  format: z.literal("console"),
+  kind: z.literal("executable"),
+  architecture: z.enum(BINARY_ARCHITECTURES),
+  console_format: z
+    .string()
+    .describe(
+      "Detected console cartridge or executable format, mapped by its own Ghidra loader (e.g. snes, gameboy, dol).",
+    ),
+  platform: z.string().describe("Console platform of the detected format."),
 });
 const rawLifecycleTargetSchema = z.object({
   ...lifecycleTargetFields,
@@ -511,6 +523,7 @@ export const sessionOutputSchemas = {
     z.discriminatedUnion("format", [
       detectedLifecycleTargetSchema,
       rawLifecycleTargetSchema,
+      consoleLifecycleTargetSchema,
     ]),
   ),
   open_bundle_resources: lifecycleResultOf(bundleResourceRootSchema),
@@ -555,6 +568,10 @@ export const sessionOutputSchemas = {
       sessionProvider.extend({
         open: z.literal(true),
         ...rawLifecycleTargetSchema.shape,
+      }),
+      sessionProvider.extend({
+        open: z.literal(true),
+        ...consoleLifecycleTargetSchema.shape,
       }),
     ]),
   ),
