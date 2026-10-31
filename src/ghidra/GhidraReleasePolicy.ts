@@ -1,5 +1,10 @@
 /** Ghidra build whose bridge behavior this REA release verifies. */
 export const SUPPORTED_GHIDRA_VERSION = "12.1.4";
+/**
+ * Further releases verified on the coding-workflow branch (rivaborn/rea): each
+ * is verified, and its release line is accepted like SUPPORTED_GHIDRA_VERSION's.
+ */
+export const ADDITIONAL_VERIFIED_GHIDRA_VERSIONS: readonly string[] = ["12.2"];
 /** Verified JDK major; admission uses the installation's declared bounds. */
 export const SUPPORTED_GHIDRA_JAVA_MAJOR = 21;
 
@@ -40,13 +45,28 @@ export const ghidraReleaseCompatibility = (
     return { status: "unresolved", raw: null };
   const version = parseGhidraRelease(raw);
   if (version === undefined) return { status: "unresolved", raw };
-  if (raw === SUPPORTED_GHIDRA_VERSION)
+  if (verifiedGhidraVersions().includes(raw))
     return { status: "verified", version, raw };
-  const verified = verifiedGhidraRelease();
-  return version.major === verified.major && version.minor === verified.minor
+  return verifiedGhidraReleases().some(
+    (verified) =>
+      version.major === verified.major && version.minor === verified.minor,
+  )
     ? { status: "compatible", version, raw }
     : { status: "unsupported", version, raw };
 };
+
+const verifiedGhidraVersions = (): readonly string[] => [
+  SUPPORTED_GHIDRA_VERSION,
+  ...ADDITIONAL_VERIFIED_GHIDRA_VERSIONS,
+];
+
+const verifiedGhidraReleases = (): readonly GhidraReleaseVersion[] =>
+  verifiedGhidraVersions().map((raw) => {
+    const version = parseGhidraRelease(raw);
+    if (version === undefined)
+      throw new TypeError(`verified Ghidra version ${raw} is not a release`);
+    return version;
+  });
 
 /**
  * Limitation recorded when a session runs a compatible build other than the
@@ -61,10 +81,14 @@ export const unverifiedGhidraBuildLimitation = (
 };
 
 /** Release line accepted by this bridge, such as `12.1.x`. */
-export const ghidraReleaseLine = (): string => {
-  const verified = verifiedGhidraRelease();
-  return `${String(verified.major)}.${String(verified.minor)}.x`;
-};
+export const ghidraReleaseLine = (): string =>
+  [
+    ...new Set(
+      verifiedGhidraReleases().map(
+        (verified) => `${String(verified.major)}.${String(verified.minor)}.x`,
+      ),
+    ),
+  ].join(" or ");
 
 /** Detail for the installation version check, including the accepted line. */
 export const ghidraVersionDetail = (raw: string | null | undefined): string => {
@@ -91,15 +115,6 @@ export const ghidraReleaseAccepted = (
 ): boolean => {
   const status = ghidraReleaseCompatibility(raw).status;
   return status === "verified" || status === "compatible";
-};
-
-const verifiedGhidraRelease = (): GhidraReleaseVersion => {
-  const version = parseGhidraRelease(SUPPORTED_GHIDRA_VERSION);
-  if (version === undefined)
-    throw new TypeError(
-      `SUPPORTED_GHIDRA_VERSION ${SUPPORTED_GHIDRA_VERSION} is not a Ghidra release`,
-    );
-  return version;
 };
 
 const parseGhidraRelease = (raw: string): GhidraReleaseVersion | undefined => {
